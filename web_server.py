@@ -80,6 +80,8 @@ class webServerHandler(BaseHTTPRequestHandler):
                   <input type='submit' value='Sign Up'>
                 </div>
                 '''
+
+                output += "<p>Already a user <a href='/users/login'>login</a></p>"
                 output += "</body></html>"
                 self.wfile.write(output)
                 return
@@ -106,7 +108,7 @@ class webServerHandler(BaseHTTPRequestHandler):
 
                 styles = css_styles()
                 output = ""
-                output += "<html><head><style>%s</style></html><body>" % styles
+                output += "<html><head><style>%s</style><body>" % styles
                 output += "<h1>List of all users</h1>"
                 for user in users:
                     output += "<li>%s | %s | %s</li>" % (user.user_name, user.email, user.password)
@@ -114,6 +116,35 @@ class webServerHandler(BaseHTTPRequestHandler):
                 output += "</body></html>"
                 self.wfile.write(output)
                 return
+
+            if self.path.endswith("/login"):
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+
+                output = ""
+                output += "<html><head><style>%s</style><body>" % css_styles()
+                output += "<h1>User Auth Application</h1><h2>Login</h2>"
+                output += '''<form method='POST' action='/users/login' enctype='multipart/form-data'>
+                <div>
+                   <label for='mail'>Email</label>
+                   <input type='email' name='useremail' id='mail' placeholder='Enter your Email'>
+                </div>
+
+                <div>
+                  <label for='pwd'>Password</label>
+                  <input type='password' name='user-pwd' id='pwd' placeholder='Choose a password'>
+                </div>
+
+                <div>
+                  <input type='submit' value='Sign Up'>
+                </div>
+                '''
+                output += "</body></html>"
+                self.wfile.write(output)
+                return
+
+
 
         except:
             pass
@@ -143,15 +174,9 @@ class webServerHandler(BaseHTTPRequestHandler):
 
                     # first select the user with the user_name
                     # then, use the username obtained to get the user email
-                    # and then the password (encrypted)
 
                     by_username = session.query(User).filter_by(user_name = username[0]).all()
                     by_email = session.query(User).filter_by(email = email[0]).all()
-                    by_password = None
-
-                    # print (a_user, another_user)
-                    # print (a_user)
-                    # print (another_user.user_name)
 
                     # print (a_user)
                     new_output = ""
@@ -161,7 +186,6 @@ class webServerHandler(BaseHTTPRequestHandler):
 
                         data = ''
                         message = ''
-
 
                         if (by_username == []):
                             message = 'email'
@@ -176,18 +200,12 @@ class webServerHandler(BaseHTTPRequestHandler):
                         new_output += "<a href='/users'>Go Back</a>"
                         new_output += "</body></html>"
                         print new_output
-                        self.send_response(200)
+                        self.send_response(400)
                         self.send_header('Content-type', 'text/html')
                         self.end_headers()
                         self.wfile.write(new_output)
                         # print output
                         return
-
-
-                    # print ('=========================')
-                    # print (a_user)
-
-                    # print (username, email, password)
 
                     user = User(user_name=username[0], email = email[0], password = encrypt(password[0]))
 
