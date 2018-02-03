@@ -20,10 +20,11 @@ def css_styles():
     body { width: 80%; }\
     a { color: #1187b2; } a:link, a:visited { color: #1187b2; }\
     form input { padding: 0.5rem; margin-right: 10px; font-size: 1em; }\
-    input[type="text"] {  }\
+    input { width: 300px; }\
     label { display: inline-block; width: 100px; }\
     form div { margin-top: 10px; }\
-    input[type="submit"] { margin-left: 100px; padding; 0.3rem; font-size: 0.8rem}\
+    button { margin-left: 170px; padding: 0.5rem; font-size: 0.8rem;\
+        display: inline-block; width: 170px; }\
     '
 def encrypt(password):
     password = password.lower()
@@ -77,7 +78,7 @@ class webServerHandler(BaseHTTPRequestHandler):
                 </div>
 
                 <div>
-                  <input type='submit' value='Sign Up'>
+                  <button type='submit'>Sign Up</button>
                 </div>
                 '''
 
@@ -139,13 +140,46 @@ class webServerHandler(BaseHTTPRequestHandler):
                 </div>
 
                 <div>
-                  <input type='submit' value='Login'>
+                  <button type='submit'>Login</button>
+                </div>
+
+                </form>
+                <div>
+                  <p>Forgot password? <a href="/users/reset-password">Reset it</a></p>
                 </div>
                 '''
                 output += "</body></html>"
                 self.wfile.write(output)
                 return
 
+            if self.path.endswith("/reset-password"):
+                self.send_response(200)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+
+                output = "<html lang='en'><head><title>Reset Password</title><style>%s</style></head><body>" % css_styles()
+                output += "<h1>Reset Password</h1>"
+                output += '''<form method='POST' action='/users/reset-password' enctype='multipart/form-data'>
+                <div>
+                    <label for='mail'>Email</label>
+                    <input type='text' name = 'useremail' id = 'mail' placeholder='Enter your Email'>
+                </div>
+                <div>
+                    <label for='pwd'>Password</label>
+                    <input type='password' id = 'pwd' name = 'user-pwd' placeholder='Enter a new Password'>
+                </div>
+                <div>
+                    <label for='pwd2'>Password</label>
+                    <input type='password' id = 'pwd2' placeholder='Enter the password again'>
+                </div>
+                <div>
+                 <button type='submit'>Submit</button>
+                </div>
+                '''
+
+                output += "</form></body></html>"
+                self.wfile.write(output)
+                return
 
 
         except:
@@ -153,7 +187,6 @@ class webServerHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
 
-        print ('got to the post handler...')
         try:
             if self.path.endswith("/users"):
                 print ('path ends with /users')
@@ -168,7 +201,6 @@ class webServerHandler(BaseHTTPRequestHandler):
                     password = fields.get('user-pwd')
 
                     # find a user with that username, email or password
-                    print (username, email, password)
 
                     # print (or_)
                     # a_user = session.query(User).filter_by(or_(user_name = username[0],
@@ -202,7 +234,7 @@ class webServerHandler(BaseHTTPRequestHandler):
                         new_output += "<h1>Error!</h1><p>A user with the %s: %s already exists</p>" % (message, data)
                         new_output += "<a href='/users'>Go Back</a>"
                         new_output += "</body></html>"
-                        print new_output
+                        # print new_output
                         self.send_response(400)
                         self.send_header('Content-type', 'text/html')
                         self.end_headers()
@@ -236,8 +268,6 @@ class webServerHandler(BaseHTTPRequestHandler):
 
                     user = session.query(User).filter_by(email=email[0], password=encrypt(password[0])).all()
 
-                    print (user)
-
                     if (user == []):
 
                         # user does not exist
@@ -257,6 +287,42 @@ class webServerHandler(BaseHTTPRequestHandler):
                     self.wfile.write(output)
                     return
 
+            if self.path.endswith("/users/reset-password"):
+                ctype, pdict = cgi.parse_header(self.headers.getheader('content-type'))
+                if ctype == "multipart/form-data":
+                    fields = cgi.parse_multipart(self.rfile, pdict)
+
+                    email = fields.get('useremail')
+
+                    user = session.query(User).filter_by(email = email[0]).one()
+
+                    if (user == []):
+                        # user does not exist
+                        # create an account
+                        output = "<html lang='en'><head><style>%s</style><body>" % css_styles()
+                        output += "<h1>Error</h1><h2>This email is not yet registered.\
+                        <a href='/users'>Create an account</a></h2></body></html>"
+
+                        self.send_response(200)
+                        self.send_header('Content-type', 'text/html')
+                        self.end_headers()
+                        self.wfile.write(output)
+                        return
+
+                    # user exist
+                    # get the password and reset it
+                    user_password = fields.get('user-pwd')
+                    user.password = encrypt(user_password[0])
+
+                    session.add(user)
+                    session.commit()
+
+                    self.send_response(301)
+                    self.send_header('Content-type', 'text/html')
+                    self.send_header('Location', '/')
+                    self.end_headers()
+                    self.wfile.write(output)
+                    return
 
         except:
             pass
